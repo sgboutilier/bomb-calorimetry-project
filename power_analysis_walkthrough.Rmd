@@ -1,0 +1,131 @@
+---
+title: "Power Analysis"
+author: "Herbert Leavitt"
+date: "2025-05-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(pwr)
+```
+
+
+
+```{r Running Power Analyses}
+# Power analyses help us determine the number of samples that we would need to
+# collect in order to attain a statistically significant result (if one exists).
+# Statisitical power can be thought of as the likelihood that we would detect
+# a significant result given X number of samples and an effect size of Y. 
+# Generally, we are satisfied with a statistical power of 0.8, which means 
+# we would detect a significant result 80% of the time. 
+
+# The pwr functions in R allows us to input variabes like effect size, 
+# desired statistical power, and level of significance (p = 0.05, for example)
+# to get n (number # of samples needed). Given 3 of any of these variables,
+# we could calculate the 4th. 
+
+# One of the most important and subjective peices of this is estimating the
+# effect size. It helps to know a little bit about the system we're in to determine what a
+# realistic effect size might look like (will sites vary by 10%? 20%? 30%?) 
+# detecting smaller and smaller variations between sites will require
+# larger and larger samples sizes. 
+
+# from experience, I know that the habitat cover has a very minor effect on
+# total site biomass, if any at all. However, caloric differences between 
+# species can be large, (f = 0.5 in the Price paper). 
+# And the same species between seasons can have
+# very large differeces too (f = 1.7 in the Price paper). 
+
+## INSTRUCTIONS ##
+
+# Use the example analyses below. Play with the effect sizes, power levels, and 
+# sample size for some of the different analyses you could do to get a sense 
+# of what we'll need to answer you're research questions, and how confident 
+# we might be about the results. 
+
+# some questions to consider: 
+# How many samples will I need to run for each group?
+# What kind of effect size can I be confident I'll detect? How does that change
+# the interpretation of my results? 
+# How many variables would I want to inlude in my model? 
+
+
+```
+
+
+```{r example_oneway_anova}
+# anovas are simple tests to determine whether two group means are significantly 
+# different. This is the kind of test you would employ if you were interested 
+# in determining if a certain species had different caloric content between 
+# site types. 
+
+# Also keep in mind that for your question 1, you will need to run enough 
+# samples of each species to get an accurate assessment of their caloric density
+# and how different each species is from each other. Lets say that for each 
+# species, you need at least enough samples to be able to detect a large effect 
+# size between two species. I also know that we can account for about 90% 
+# of all the biomass by measuring 5 species. So, how many samples is that? 
+
+
+# Power analysis for a one-way ANOVA
+# k = number of groups
+# f = effect size (Cohen's f): small = 0.1, medium = 0.25, large = 0.4
+# sig.level = significance threshold (typically 0.05)
+# power = desired statistical power (typically 0.8)
+
+result_anova <- pwr.anova.test(k = 2, f = 0.25, sig.level = 0.05, power = 0.8)
+
+
+result_anova
+
+# in this example, n = 322.1, which indicates the number of samples
+# in each group that we'd need to detect on effect of 10% between 3 group to a
+# significance level of p = 0.05 about 80% of the time. 
+
+
+#this return says 26 samples of each species to determine whether there is a diffference between caloric content of any 2 given species
+```
+```{r example_correlation}
+# this is a simplified test to determine of two variables are correlated
+# this is the simplest version of a linear regression. 
+
+# Power analysis for correlation
+# r = expected correlation coefficient (effect size)
+# sig.level = significance threshold (typically 0.05)
+# power = desired statistical power (typically 0.8)
+
+result_cor <- pwr.r.test(r = 0.253, sig.level = 0.05, power = 0.8)
+result_cor
+
+#even after sampling all 120 sites, if the relationship does not have an effect size greater than 0.253 (if the data is hard to define with a line because of spread or whatever), the results will not be significant
+
+
+```
+
+```{r example_regression}
+# This example runs a power analysis for a generalized linear regression with 
+# more than one predictor (variable). You would use this to see of more than 
+# one habitat variable (mangrove cover, % land, for example) together in a model
+# accurately explain areal caloric availability. 
+
+# Power analysis for multiple regression
+# u = number of predictors
+# v = sample size - u - 1
+# f2 = effect size (Cohen's f²), where f² = R² / (1 - R²)
+#    small = 0.02, medium = 0.15, large = 0.35
+# sig.level = significance threshold (typically 0.05)
+# power = desired statistical power (typically 0.8)
+r <- 0.2
+f2 <- r/(1-r)
+f2
+
+# Example: 2 predictors, small effect size
+result_regression <- pwr.f2.test(u = 2, power = 0.8, f2 = f2, sig.level = 0.05)
+result_regression
+
+#more variables means need more samples, why would i add another variable ?
+#40 samples if 2 variables
+```
+
+

@@ -1,0 +1,102 @@
+---
+title: "sample selection code"
+author: "Samantha Boutilier"
+date: "2025-06-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## clean data 
+```{r cleaning}
+#read in the data 
+drop_sample_data <-read.csv("drop_sample_tracking.csv") 
+
+#pick these columns
+clean_drop_sample_data <- select(drop_sample_data, c("site_date_key", "sample_trip", "drop_processing.species_code","drop_processing.tin_preweight", "tin_weights.tin_weight", "final_vial", "grinding_inventory.box_code", "grinding_inventory.box_position" )) %>%
+  
+#add in sample weight column
+mutate(sample_weight = tin_weights.tin_weight - drop_processing.tin_preweight) %>%
+  
+#pull out fall trips of both years
+filter(sample_trip == c("2209", "2308")) %>%
+  
+  na.omit() 
+  
+tibble(clean_drop_sample_data)
+```
+
+
+## identify top species contributing to biomass 
+```{r top species contributors}
+
+#sum of biomass by species code
+
+biomass_by_species_table <- summarize(clean_drop_sample_data, sum(sample_weight), .by = drop_processing.species_code) %>%
+  
+#arrange in decending order
+  arrange(desc(`sum(sample_weight)`)) %>%
+  
+  #pull out big fish with large ranges 
+  
+  filter(!(drop_processing.species_code %in% c( "MUGCEP", "SCIOCE", "LAGRHO"))) %>%
+  
+  #pull only top ten
+  slice_head(n=10)
+
+biomass_by_species_table
+
+
+```
+
+
+
+
+## select vials randomly ##
+```{r sample selection}
+
+#keep only 6 selected species
+sample_selection <- clean_drop_sample_data %>%
+  
+    filter(drop_processing.species_code %in% c("MINLON ","CALSAP", "PANOBE", "PENSETS", "PALSP", "FUNGRA"))
+      
+#subset large samples
+large_samples <- sample_selection %>% filter(sample_weight >= 0.34)
+
+#subset small samples
+small_samples <- sample_selection %>% filter(sample_weight < 0.34) %>%
+  
+  #add together weights of sample species at same site and time
+  
+  summarize(sum(sample_weight), .by = c(site_date_key, drop_processing.species_code))%>%
+  
+  #remove vials that are still too small
+  filter(`sum(sample_weight)` > 0.34)
+  
+#recombine large and small
+legit_sample_pool <- bind_rows(small_samples, large_samples)
+
+#group same species and date/location, pick one randomly, and ungroup
+samples_choice<- legit_sample_pool %>%
+  
+  group_by(drop_processing.species_code, site_date_key) %>%
+  slice_sample(n=1) %>%
+  ungroup() %>%
+
+  #pick 26 vials randomly
+ slice_sample(n=26, by= drop_processing.species_code) 
+
+
+```
+
+## Join sample selction with their appropriate location and info and such ##
+```{r join}
+#match up samples choices with other useful information such as location etc
+samples <- 
+left_join(x= samples_choice, y= clean_drop_sample_data)
+
+```
+

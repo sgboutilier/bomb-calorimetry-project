@@ -1,0 +1,150 @@
+---
+title: "bomb calorimetry sample information"
+author: "Samantha Boutilier"
+date: "2025-06-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+## clean data ##
+```{r cleaning}
+#read in the data :)
+drop_sample_data <-read.csv("drop_sample_tracking.csv") 
+
+##clean data##
+#pick these columns
+clean_drop_sample_data <- select(drop_sample_data, c("site_date_key", "sample_trip", "drop_processing.species_code","drop_processing.tin_preweight", "tin_weights.tin_weight", "final_vial", "grinding_inventory.box_code", "grinding_inventory.box_position" )) %>%
+  
+#add in sample weight column
+mutate(sample_weight = tin_weights.tin_weight - drop_processing.tin_preweight) %>%
+  
+#pull out fall trips of both years
+filter(sample_trip == c("2209", "2308")) %>%
+  
+  na.omit() 
+  
+tibble(clean_drop_sample_data)
+```
+
+
+
+## identify top species contributing to biomass ##
+```{r top species contributors}
+##find top 5 species contributing to biomass##
+#sum of biomass by species code
+
+biomass_by_species_table <- summarize(clean_drop_sample_data, sum(sample_weight), .by = drop_processing.species_code) %>%
+  
+#arrange in decending order
+  arrange(desc(`sum(sample_weight)`)) %>%
+  
+  filter(!(drop_processing.species_code %in% c( "MUGCEP", "SCIOCE", "LAGRHO"))) %>%
+  
+  slice_head(n=10)
+
+biomass_by_species_table
+
+
+#top_species <- clean_drop_sample_data$drop_processing.species_code == c("CALSAP", "PANOBE", "PENSETS", "PALSP", "MINLON", "FUNGRA")
+
+```
+
+
+
+
+## select vials randomly ##
+```{r sample selection}
+##select vials randomly based on this information##
+
+sample_selection <- clean_drop_sample_data %>%
+  
+    filter(drop_processing.species_code %in% c("MINLON ","CALSAP", "PANOBE", "PENSETS", "PALSP", "FUNGRA"))# %>%
+      
+
+large_samples <- sample_selection %>% filter(sample_weight >= 0.34)
+
+small_samples <- sample_selection %>% filter(sample_weight < 0.34) %>%
+  
+  summarize(sum(sample_weight), .by = c(site_date_key, drop_processing.species_code))%>%
+  
+  filter(`sum(sample_weight)` > 0.34)
+  
+legit_sample_pool <- bind_rows(small_samples, large_samples)
+
+    # if(sample_selection$sample_weight < 0.34) {
+  #   summarize(sum(sample_weight), .by = c(site_date_key, drop_processing.species_code))
+    
+  
+ # summarize_if()
+  
+  
+# if (sample_weight < 0.34) {
+ #   summarize(sum(sample_weight), .by = c(site_date_key, drop_processing.species_code))} %>%
+  
+
+#large_samples 
+#lrg_SAMPLE_COPY<-large_samples
+ #count(drop_processing.species_code)
+#legit_sample_pool %>%
+  
+#group_by(drop_processing.species_code, site_date_key) %>%
+  
+ # slice_sample(n=1) 
+
+#pool_check <- legit_sample_pool %>%
+  
+#group_by(drop_processing.species_code, site_date_key)
+
+
+samples_choice<- legit_sample_pool %>%
+  
+  group_by(drop_processing.species_code, site_date_key) %>%
+  slice_sample(n=1) %>%
+  ungroup() %>%
+
+ slice_sample(n=26, by= drop_processing.species_code) 
+
+
+
+```
+
+## Join sample selction with their appropriate location and info and such ##
+```{r join}
+
+samples <- 
+left_join(x= samples_choice, y= clean_drop_sample_data)
+
+```
+
+
+
+
+
+
+# dump #
+```{r experimenting and stuff}
+
+spike_calc <- sample_selection %>%
+mutate(spike_needed = 0.8 - (`sum(sample_weight)`- 0.08)) %>%
+  
+  filter(spike_needed > 0) 
+  
+
+sum(spike_calc$spike_needed)
+
+spike_calc %>%
+  summarize(sum(spike_needed), .by = drop_processing.species_code)
+
+
+#determine unique trips for filtering
+unique(clean_drop_sample_data$sample_trip)
+
+unique(clean_drop_sample_data$drop_processing.species_code)
+
+
+```
