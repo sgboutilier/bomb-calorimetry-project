@@ -16,6 +16,7 @@ library(tidyverse)
 #read in the data :)
 drop_sample_data <-read.csv("drop_sample_tracking.csv") 
 
+
 ##clean data##
 #pick these columns
 clean_drop_sample_data <- select(drop_sample_data, c("site_date_key", "sample_trip", "drop_processing.species_code","drop_processing.tin_preweight", "tin_weights.tin_weight", "final_vial", "grinding_inventory.box_code", "grinding_inventory.box_position" )) %>%
