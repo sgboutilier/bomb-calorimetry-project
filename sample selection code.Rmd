@@ -7,8 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-# Im changing stuff!
+library(dplyr)
 ```
 
 
@@ -71,6 +70,12 @@ large_samples <- sample_selection %>% filter(sample_weight >= 0.34)
 #subset small samples
 small_samples <- sample_selection %>% filter(sample_weight < 0.34) %>%
   
+  # some rows are identical to each other as a consequence of the way the 
+  # original drop_sample_tracking table is set up. We will use unique() to 
+  # only keep non-duplicated rows
+  
+  unique() %>% 
+  
   #add together weights of sample species at same site and time
   
   summarize(sum(sample_weight), .by = c(site_date_key, drop_processing.species_code))%>%
@@ -92,13 +97,21 @@ samples_choice<- legit_sample_pool %>%
  slice_sample(n=26, by= drop_processing.species_code) 
 
 
+small_selected <- samples_choice %>%  
+  filter(is.na(sample_trip)) %>% # leave only rows from small_samples
+  select("site_date_key", "drop_processing.species_code", "sum(sample_weight)")  %>% #clean it up
+  left_join(clean_drop_sample_data, by = c("site_date_key", "drop_processing.species_code")) # left join with drop sample data so we get all vials for each site/species
+
+
+
 ```
 
 ## Join sample selction with their appropriate location and info and such ##
 ```{r join}
 #match up samples choices with other useful information such as location etc
-samples <- 
-left_join(x= samples_choice, y= clean_drop_sample_data)
+final_selected <- samples_choice %>% 
+  filter(!is.na(sample_trip)) %>% #remove the old rows from the small_table
+  rbind(small_selected) 
 
 ```
 
